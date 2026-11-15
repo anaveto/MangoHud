@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <thread>
+#include <spdlog/spdlog.h> // as cpu.cpp: the metrics headers rely on what it includes
 #include "cpu/cpu.hpp"
 
 namespace fs = std::filesystem;
