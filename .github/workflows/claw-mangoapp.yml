@@ -1,0 +1,32 @@
+name: mangoapp for Bazzite
+
+# Builds mangoapp on Fedora 45 (Bazzite's base) for the MSI Claw.
+on:
+  push:
+    branches: [claw]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: registry.fedoraproject.org/fedora:45
+    steps:
+    - name: Install dependencies
+      run: |
+        dnf -y install git meson ninja-build gcc gcc-c++ glslang python3-mako \
+          libX11-devel libXi-devel libxkbcommon-devel wayland-devel wayland-protocols-devel \
+          mesa-libGL-devel mesa-libEGL-devel mesa-libgbm-devel libdrm-devel \
+          vulkan-loader-devel vulkan-headers dbus-devel systemd-devel libcap-devel \
+          yaml-cpp-devel glfw-devel libtracefs-devel unzip wget
+    - uses: actions/checkout@v4
+    - name: Configure
+      run: |
+        meson setup build -Dmangoapp=true -Dwith_mangohud_next=false -Dwith_xnvctrl=disabled \
+          -Dmangoplot=disabled -Dtests=disabled -Dinclude_doc=false
+    - name: Build
+      run: meson compile -C build mangoapp
+    - uses: actions/upload-artifact@v4
+      with:
+        name: mangoapp
+        path: build/src/mangoapp
