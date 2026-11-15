@@ -1,0 +1,29 @@
+name: xe_drm poll leak test
+
+on:
+  push:
+    branches: [test/xe-drm-leak]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Build without and with the fix
+      run: |
+        X=mangohud-next/server/metrics/gpu/intel/xe
+        mkdir -p out stub/spdlog
+        printf '#pragma once\n#define SPDLOG_ERROR(...) ((void)0)\n#define SPDLOG_TRACE(...) ((void)0)\n#define SPDLOG_DEBUG(...) ((void)0)\n' > stub/spdlog/spdlog.h
+        git show 791f92016625:$X/xe_drm.cpp > $X/xe_drm_without.cpp
+        git show a11202ee8fc1:$X/xe_drm.cpp > $X/xe_drm_with.cpp
+        for v in without with; do
+          g++ -O2 -static -std=c++17 -Istub -I$X -o out/xe-drm-leak-$v-fix tools/xe-drm-leak/main.cpp $X/xe_drm_$v.cpp
+        done
+        git diff --no-index $X/xe_drm_without.cpp $X/xe_drm_with.cpp > out/fix.diff || true
+        sha256sum out/* | tee out/SHA256SUMS
+    - uses: actions/upload-artifact@v4
+      with:
+        name: xe-drm-leak
+        path: out/
