@@ -14,11 +14,12 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
-        dnf -y install git meson ninja-build gcc gcc-c++ glslang python3-mako \
+        # no libtracefs: Bazzite doesn't ship it
+        dnf -y install git meson ninja-build gcc gcc-c++ libstdc++-static glslang python3-mako \
           libX11-devel libXi-devel libxkbcommon-devel wayland-devel wayland-protocols-devel \
           mesa-libGL-devel mesa-libEGL-devel mesa-libgbm-devel libdrm-devel \
           vulkan-loader-devel vulkan-headers dbus-devel systemd-devel libcap-devel \
-          yaml-cpp-devel glfw-devel libtracefs-devel unzip wget
+          yaml-cpp-devel glfw-devel unzip wget
     - uses: actions/checkout@v4
     - name: Configure
       run: |
