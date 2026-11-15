@@ -26,6 +26,11 @@ private:
         { "power_limit" , "power2_max"      }
     };
 
+    // Integrated GPUs have no xe hwmon; their power is in the package's RAPL "uncore" domain
+    HwmonBase rapl_uncore;
+    const std::vector<hwmon_sensor> rapl_sensors = { { "energy", "energy_uj" } };
+    void find_rapl_uncore();
+
     uint64_t previous_power_usage = 0;
     std::map<std::string, std::pair<uint64_t, uint64_t>> previous_cycles;
 

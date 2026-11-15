@@ -9,10 +9,39 @@ Intel_xe::Intel_xe(
     hwmon.setup(sensors, drm_node);
     drm_available = drm.setup("/dev/dri/by-path/pci-" + pci_dev + "-card");
     find_gt_dir();
+
+    if (!hwmon.is_open("energy"))
+        find_rapl_uncore();
+}
+
+void Intel_xe::find_rapl_uncore() {
+    std::error_code ec;
+
+    for (const auto& entry : fs::directory_iterator("/sys/class/powercap", ec)) {
+        // a domain of package 0 (intel-rapl:0:N) named "uncore"
+        if (entry.path().filename().string().rfind("intel-rapl:0:", 0) != 0)
+            continue;
+
+        std::ifstream ifs_name(entry.path() / "name");
+        std::string name;
+        std::getline(ifs_name, name);
+
+        if (name != "uncore")
+            continue;
+
+        rapl_uncore.base_dir = entry.path().string();
+        rapl_uncore.setup(rapl_sensors);
+
+        if (!rapl_uncore.is_open("energy"))
+            SPDLOG_DEBUG("\"{}/energy_uj\" can't be opened. GPU power will be unavailable.", rapl_uncore.base_dir);
+
+        return;
+    }
 }
 
 void Intel_xe::pre_poll_overrides() {
     hwmon.poll_sensors();
+    rapl_uncore.poll_sensors();
     fdinfo.poll_all();
     drm.poll();
     throttling = get_throttling_status();
@@ -61,9 +90,12 @@ int Intel_xe::get_voltage() {
 }
 
 float Intel_xe::get_power_usage() {
-    uint64_t current_power_usage = hwmon.get_sensor_value("energy");
+    // both counters are in microjoules
+    uint64_t current_power_usage = hwmon.is_open("energy") ?
+        hwmon.get_sensor_value("energy") : rapl_uncore.get_sensor_value("energy");
 
-    if (!previous_power_usage) {
+    // first reading, or the counter wrapped (RAPL counters wrap every few hours)
+    if (!previous_power_usage || current_power_usage < previous_power_usage) {
         previous_power_usage = current_power_usage;
         return 0;
     }
