@@ -18,10 +18,11 @@ static void put(const fs::path& d, const char* name, const std::string& v) {
 
 static int failures;
 
-static void run(const char* name, std::vector<Bat> bats, float drain, float charge) {
+static void run(const char* name, std::vector<Bat> bats, float drain, float charge, bool fresh = true) {
     fs::path root = fs::temp_directory_path() / "battery-test";
     fs::remove_all(root);
-    Battery_Stats = BatteryStats();
+    if (fresh)
+        Battery_Stats = BatteryStats();
     for (size_t i = 0; i < bats.size(); i++) {
         fs::path d = root / ("BAT" + std::to_string(i));
         fs::create_directories(d);
@@ -63,7 +64,7 @@ int main() {
     run("two: charging 20 W, charging 4 W", {{"Charging", 20000000, 0, 0}, {"Charging", 0, 1000000, 4000000}}, 0, 24.0f);
     // the same battery unplugged: the charge rate must go back to 0
     run("charging, then ...", {{"Charging", 30000000, 0, 0}}, 0, 30.0f);
-    run("... discharging", {{"Discharging", 9000000, 0, 0}}, 9.0f, 0);
+    run("... discharging (same BatteryStats)", {{"Discharging", 9000000, 0, 0}}, 9.0f, 0, false);
     printf("%d failure(s)\n", failures);
     return failures != 0;
 }
