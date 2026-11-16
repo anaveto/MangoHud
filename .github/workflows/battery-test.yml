@@ -1,0 +1,22 @@
+name: Battery charge test
+
+on:
+  push:
+    branches: [test/battery-charge-watt]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build and run
+      run: |
+        mkdir -p out stub/spdlog
+        printf '#pragma once\n#include <bits/stdc++.h>\n#define SPDLOG_ERROR(...) ((void)0)\n#define SPDLOG_WARN(...) ((void)0)\n#define SPDLOG_INFO(...) ((void)0)\n#define SPDLOG_TRACE(...) ((void)0)\n#define SPDLOG_DEBUG(...) ((void)0)\n' > stub/spdlog/spdlog.h
+        g++ -O2 -std=c++17 -Istub -Iinclude -Isrc -o out/battery-test tools/battery-test/main.cpp src/battery.cpp src/file_utils.cpp
+        out/battery-test | tee out/result.txt
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: battery-test
+        path: out/
